@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MetroMatrix — Smart City Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* ---------- Reset ---------- */
+    * { box-sizing: border-box; margin:0; padding:0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* Sans-serif site font */
+      background: linear-gradient(135deg,#0f0f23 0%,#1a1a2e 50%,#16213e 100%);
+      color:#fff; min-height:100vh; -webkit-font-smoothing:antialiased;
+    }
+
+    /* ---------- Top area: logo centered + transparent search + nav ---------- */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      display:flex; flex-direction:column; align-items:center;
+      gap:10px; padding:18px 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      z-index: 1200;
+    }
+
+    .brand {
+      display:flex; align-items:center; gap:12px;
+      justify-content:center;
+    }
+    /* circular logo */
+    .brand-logo {
+      width:48px; height:48px; border-radius:999px;
+      display:flex; align-items:center; justify-content:center;
+      background: linear-gradient(135deg,#60a5fa 0%, #7c3aed 100%);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      font-weight:900; font-size:1.1rem;
+      border: 2px solid rgba(255,255,255,0.12);
+    }
+    .brand-title {
+      font-weight:900; font-size:1.35rem; letter-spacing:0.6px;
+      /* use Sans-Serif via body font stack */
+    }
+
+    /* transparent search centered below logo */
+    .search-row {
+      width:100%; max-width:900px; display:flex; justify-content:center;
+      padding:0 16px;
+    }
+    .search {
+      width:100%; max-width:700px; display:flex; gap:8px;
+      align-items:center;
+      background: rgba(255,255,255,0.04); /* transparent */
+      border-radius:999px; padding:8px 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(6px);
+    }
+    .search input[type="search"] {
+      background: transparent; border: none; outline:none; color:#fff;
+      width:100%; padding:8px 10px; font-size:1rem; font-weight:600;
+    }
+    .search input::placeholder { color: rgba(255,255,255,0.62); font-weight:600; }
+    .search button {
+      background: linear-gradient(90deg,#60a5fa,#7c3aed); border:none; color:#fff;
+      padding:8px 14px; border-radius:30px; font-weight:800; cursor:pointer;
+      box-shadow: 0 8px 24px rgba(124,58,237,0.15);
+      transition: transform .14s ease;
+    }
+    .search button:active { transform: translateY(1px); }
+
+    /* nav options just below the logo name (centered) */
+    .nav-row {
+      display:flex; gap:12px; margin-top:4px;
+    }
+    .nav-btn {
+      background: transparent; color:#fff; padding:8px 14px;
+      border-radius:18px; border: 1px solid rgba(255,255,255,0.06);
+      font-weight:700; cursor:pointer; text-transform:none;
+      font-family: inherit; /* Sans serif */
+    }
+    .nav-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.45); }
+
+    /* ---------- Main content ---------- */
+    .container { margin-top: 170px; padding: 2rem; } /* leaves space for topbar */
+    .section { min-height:100vh; padding: 4rem 2rem; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .section-title { font-size:2.6rem; font-weight:800; margin-bottom:1.2rem; text-shadow:0 8px 28px rgba(0,0,0,0.6); text-align:center; }
+
+    .section-video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; pointer-events:none; opacity:.88; filter: saturate(1.08) contrast(1.03); }
+    .section::before { content:''; position:absolute; inset:0; z-index:2; background: linear-gradient(180deg, rgba(6,10,24,0.18), rgba(6,10,24,0.22)); pointer-events:none; }
+
+    .data-card { position:relative; z-index:10; width:95%; max-width:1200px; background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border-radius:16px; padding:2rem; box-shadow: 0 14px 50px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.06); backdrop-filter: blur(10px); }
+
+    .data-header { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; }
+    .data-title { font-size:1.6rem; font-weight:800; }
+    .data-value { font-size:2.6rem; font-weight:900; text-shadow:0 8px 30px rgba(0,0,0,0.5); }
+
+    .chart-container { margin-top:1.4rem; height:420px; border-radius:14px; overflow:hidden; padding:1rem; border:1px solid rgba(255,255,255,0.06); background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); }
+    .stats-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap:1rem; margin-top:1rem; }
+
+    .stat-item { background: rgba(255,255,255,0.03); padding:1rem; border-radius:12px; border:1px solid rgba(255,255,255,0.04); }
+    .stat-value { font-size:1.6rem; font-weight:800; }
+
+    /* aqi badge */
+    .aqi-badge { display:inline-block; padding:.45rem 1.2rem; border-radius:999px; font-weight:800; margin-top:.6rem; border:1px solid rgba(255,255,255,0.08); }
+
+    /* responsive */
+    @media (max-width:900px) { .chart-container { height:340px; } .container { padding:1rem; } .topbar { padding:14px 10px; } }
+    @media (max-width:600px) { .chart-container { height:300px; } .brand-title { font-size:1.05rem; } .brand-logo { width:40px; height:40px; } .container { margin-top:160px; } }
+  </style>
+</head>
+<body>
+  <!-- Topbar: centered logo, search, nav -->
+  <div class="topbar" role="banner" aria-label="Topbar">
+    <div class="brand" aria-hidden="false">
+      <div class="brand-logo" aria-hidden="true">M</div>
+      <div class="brand-title">MetroMatrix</div>
+    </div>
+
+    <!-- Transparent search bar -->
+    <div class="search-row" role="search">
+      <div class="search" aria-label="Search for location">
+        <input id="citySearch" type="search" placeholder="Search location (e.g., London, Delhi, New York)" aria-label="Location search" />
+        <button id="searchBtn" aria-label="Search">Search</button>
+      </div>
+    </div>
+
+    <!-- Nav options centered under logo -->
+    <div class="nav-row" role="navigation" aria-label="Primary">
+      <button class="nav-btn" data-section="weather">Weather</button>
+      <button class="nav-btn" data-section="air-quality">Air Quality</button>
+      <button class="nav-btn" data-section="traffic">Traffic</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- WEATHER -->
+    <section id="weather" class="section" aria-labelledby="weather-title">
+      <video class="section-video weather-video" autoplay loop muted playsinline>
+        <source src="https://assets.mixkit.co/videos/51105/51105-720.mp4" type="video/mp4">
+      </video>
+
+      <div class="data-card">
+        <h2 id="weather-title" class="section-title">Weather Information</h2>
+        <div class="data-header">
+          <div>
+            <div class="data-title">Current Weather</div>
+            <div class="data-label" id="weatherLocation" style="opacity:.92; margin-top:.2rem;">—</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="data-value" id="weatherTemp">—</div>
+            <div style="opacity:.88;" id="weatherDesc">—</div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-item"><div class="stat-value" id="humidity">—</div><div style="opacity:.85;">Humidity</div></div>
+          <div class="stat-item"><div class="stat-value" id="windSpeed">—</div><div style="opacity:.85;">Wind Speed</div></div>
+          <div class="stat-item"><div class="stat-value" id="pressure">—</div><div style="opacity:.85;">Pressure</div></div>
+          <div class="stat-item"><div class="stat-value" id="visibility">—</div><div style="opacity:.85;">Visibility</div></div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="weatherChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- AIR QUALITY -->
+    <section id="air-quality" class="section" aria-labelledby="aqi-title">
+      <video class="section-video air-quality-video" autoplay loop muted playsinline>
+        <!-- YOUR VIDEO -->
+        <source src="https://assets.mixkit.co/videos/14051/14051-720.mp4" type="video/mp4">
+      </video>
+
+      <div class="data-card">
+        <h2 id="aqi-title" class="section-title">Air Quality Index</h2>
+
+        <div class="data-header">
+          <div>
+            <div class="data-title">Air Quality Index</div>
+            <div class="data-label" id="aqiLocation" style="opacity:.92; margin-top:.2rem;">—</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="data-value" id="aqiValue">—</div>
+            <div style="margin-top:.5rem;"><span class="aqi-badge" id="aqiBadge">—</span></div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-item"><div class="stat-value" id="pm25">—</div><div style="opacity:.85;">PM2.5 (µg/m³)</div></div>
+          <div class="stat-item"><div class="stat-value" id="pm10">—</div><div style="opacity:.85;">PM10 (µg/m³)</div></div>
+          <div class="stat-item"><div class="stat-value" id="no2">—</div><div style="opacity:.85;">NO₂ (µg/m³)</div></div>
+          <div class="stat-item"><div class="stat-value" id="o3">—</div><div style="opacity:.85;">O₃ (µg/m³)</div></div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="airQualityChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRAFFIC -->
+    <section id="traffic" class="section" aria-labelledby="traffic-title">
+      <video class="section-video traffic-video" autoplay loop muted playsinline>
+        <source src="https://assets.mixkit.co/videos/25942/25942-720.mp4" type="video/mp4">
+      </video>
+
+      <div class="data-card">
+        <h2 id="traffic-title" class="section-title">Traffic Information</h2>
+
+        <div class="data-header">
+          <div>
+            <div class="data-title">Traffic Density</div>
+            <div class="data-label" id="trafficLocation" style="opacity:.92; margin-top:.2rem;">—</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="data-value" id="trafficLevel">—</div>
+            <div style="opacity:.9;margin-top:.4rem;" id="trafficDesc">—</div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-item"><div class="stat-value" id="avgSpeed">—</div><div style="opacity:.85;">Average Speed</div></div>
+          <div class="stat-item"><div class="stat-value" id="congestion">—</div><div style="opacity:.85;">Congestion</div></div>
+          <div class="stat-item"><div class="stat-value" id="incidents">—</div><div style="opacity:.85;">Active Incidents</div></div>
+          <div class="stat-item"><div class="stat-value" id="travelTime">—</div><div style="opacity:.85;">Avg Travel Time</div></div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="trafficChart"></canvas>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    /**
+     * MetroMatrix — single-file behavior
+     *
+     * Add your OpenWeatherMap API key in the OPENWEATHER_API_KEY constant.
+     * This code uses:
+     *  - Geocoding: http://api.openweathermap.org/geo/1.0/direct?q={city}&limit=1&appid={KEY}
+     *  - Current weather: https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={KEY}&units=metric
+     *  - Air pollution: https://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={KEY}
+     *
+     * Traffic: placeholder + simulated fallback (update TRAFFIC_API_URL and logic if you have a paid traffic API).
+     */
+
+    // ------------ Put your keys here ------------
+    const OPENWEATHER_API_KEY = "PASTE_YOUR_OPENWEATHERMAP_KEY_HERE";
+    // If you have a real Traffic API, paste its endpoint/key and update fetchTrafficFromAPI()
+    // const TRAFFIC_API_KEY = "PASTE_TRAFFIC_KEY";
+
+    // ------------ DOM ----------
+    const cityInput = document.getElementById('citySearch');
+    const searchBtn = document.getElementById('searchBtn');
+
+    const weatherLocation = document.getElementById('weatherLocation');
+    const weatherTemp = document.getElementById('weatherTemp');
+    const weatherDesc = document.getElementById('weatherDesc');
+    const humidityEl = document.getElementById('humidity');
+    const windSpeedEl = document.getElementById('windSpeed');
+    const pressureEl = document.getElementById('pressure');
+    const visibilityEl = document.getElementById('visibility');
+
+    const aqiLocation = document.getElementById('aqiLocation');
+    const aqiValueEl = document.getElementById('aqiValue');
+    const aqiBadge = document.getElementById('aqiBadge');
+    const pm25El = document.getElementById('pm25');
+    const pm10El = document.getElementById('pm10');
+    const no2El = document.getElementById('no2');
+    const o3El = document.getElementById('o3');
+
+    const trafficLocation = document.getElementById('trafficLocation');
+    const trafficLevel = document.getElementById('trafficLevel');
+    const trafficDesc = document.getElementById('trafficDesc');
+    const avgSpeedEl = document.getElementById('avgSpeed');
+    const congestionEl = document.getElementById('congestion');
+    const incidentsEl = document.getElementById('incidents');
+    const travelTimeEl = document.getElementById('travelTime');
+
+    // Charts
+    let weatherChart=null, airQualityChart=null, trafficChart=null;
+
+    // Nav scroll
+    document.querySelectorAll('.nav-btn').forEach(btn=>{
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-section');
+        const sec = document.getElementById(id);
+        if (sec) sec.scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    });
+
+    // ---------- Helper: show error text temporarily ----------
+    function showTempError(targetEl, text) {
+      const old = targetEl.textContent;
+      targetEl.textContent = text;
+      setTimeout(()=>{ targetEl.textContent = old; }, 5000);
+    }
+
+    // ---------- Geocode city to lat/lon using OpenWeatherMap ----------
+    async function geocodeCity(city) {
+      if (!OPENWEATHER_API_KEY || OPENWEATHER_API_KEY.includes('PASTE')) {
+        throw new Error('OpenWeatherMap API key not set. Add it to OPENWEATHER_API_KEY.');
+      }
+      const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${OPENWEATHER_API_KEY}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Geocoding failed');
+      const data = await res.json();
+      if (!data || data.length === 0) throw new Error('Location not found');
+      return { lat: data[0].lat, lon: data[0].lon, name: data[0].name, country: data[0].country, state: data[0].state };
+    }
+
+    // ---------- Fetch current weather ----------
+    async function fetchWeather(lat, lon) {
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}&units=metric`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Weather fetch failed');
+      return await res.json();
+    }
+
+    // ---------- Fetch Air Pollution (AQI + components) ----------
+    async function fetchAirPollution(lat, lon) {
+      const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Air pollution fetch failed');
+      return await res.json();
+    }
+
+    // ---------- Traffic: placeholder function ----------
+    // Many traffic APIs are paid. If you have an API, replace this function's content with a real fetch.
+    async function fetchTrafficFromAPIOrSimulate(lat, lon) {
+      // try real API (commented placeholder)
+      // const url = `YOUR_TRAFFIC_API_ENDPOINT?lat=${lat}&lon=${lon}&key=${TRAFFIC_API_KEY}`;
+      // const res = await fetch(url); ...
+      // For now, return simulated data based on lat/lon deterministic randomness
+      const seed = Math.abs(Math.floor((lat*1000 + lon*1000))) % 100;
+      // derive level
+      const level = seed < 40 ? 'Low' : seed < 75 ? 'Medium' : 'High';
+      const percentage = Math.min(98, Math.max(12, Math.floor(seed + Math.random()*20)));
+      const avgSpeed = level === 'Low' ? Math.floor(50 + Math.random()*15) : level === 'Medium' ? Math.floor(30 + Math.random()*15) : Math.floor(15 + Math.random()*10);
+      const incidents = Math.floor(Math.random()*3);
+      const travelTime = Math.max(6, Math.floor(25 + (100-percentage)/2));
+      const hourly = Array.from({length:12}, ()=> Math.floor(Math.max(20, Math.min(95, percentage + (Math.random()*20-10)))));
+      return { level, percentage, avgSpeed, incidents, travelTime, hourly };
+    }
+
+    // ---------- Render helpers ----------
+    function updateAQIBadgeAndColor(aqi) {
+      if (aqi <= 50) {
+        aqiBadge.textContent = 'Good'; aqiBadge.className = 'aqi-badge'; aqiBadge.style.background = 'rgba(16,185,129,0.12)'; aqiBadge.style.color = '#10B981';
+      } else if (aqi <= 100) {
+        aqiBadge.textContent = 'Moderate'; aqiBadge.style.background = 'rgba(245,158,11,0.12)'; aqiBadge.style.color = '#F59E0B';
+      } else if (aqi <= 150) {
+        aqiBadge.textContent = 'Unhealthy (S)'; aqiBadge.style.background = 'rgba(249,115,22,0.12)'; aqiBadge.style.color = '#F97316';
+      } else {
+        aqiBadge.textContent = 'Unhealthy'; aqiBadge.style.background = 'rgba(239,68,68,0.12)'; aqiBadge.style.color = '#EF4444';
+      }
+    }
+
+    // Charts creation (silky gradients) - concise versions
+    function createWeatherChart(dataset) {
+      const ctx = document.getElementById('weatherChart').getContext('2d');
+      if (weatherChart) weatherChart.destroy();
+      const g = ctx.createLinearGradient(0,0,0,420); g.addColorStop(0,'rgba(255,214,0,0.28)'); g.addColorStop(1,'rgba(255,255,255,0.04)');
+      weatherChart = new Chart(ctx, {
+        type:'line', data:{ labels:dataset.labels, datasets:[{
+          label:'Temp (°C)', data:dataset.data, borderColor:'#FFD54F', backgroundColor:g, borderWidth:3, tension:0.38, fill:true, pointRadius:5, pointBorderColor:'#fff'
+        }]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#fff'}}}, scales:{ x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}} } }
+      });
+    }
+
+    function createAQIChart(pollutants) {
+      const ctx = document.getElementById('airQualityChart').getContext('2d');
+      if (airQualityChart) airQualityChart.destroy();
+      const h = 420;
+      function g(a,b){ const gg = ctx.createLinearGradient(0,0,0,h); gg.addColorStop(0,a); gg.addColorStop(1,b); return gg; }
+      airQualityChart = new Chart(ctx, {
+        type:'bar', data:{
+          labels:['PM2.5','PM10','NO₂','O₃','SO₂'],
+          datasets:[{ label:'µg/m³', data:[pollutants.pm2_5, pollutants.pm10, pollutants.no2, pollutants.o3, pollutants.so2], backgroundColor:[ g('rgba(12,210,160,0.95)','rgba(12,210,160,0.28)'), g('rgba(255,193,7,0.95)','rgba(255,193,7,0.28)'), g('rgba(255,90,70,0.95)','rgba(255,90,70,0.28)'), g('rgba(80,180,200,0.95)','rgba(80,180,200,0.28)'), g('rgba(220,80,120,0.95)','rgba(220,80,120,0.28)')], borderWidth:2, borderColor:'#fff', borderRadius:8, barThickness:44 }]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#fff'}}}, scales:{ x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}} } }
+      });
+    }
+
+    function createTrafficChart(hourly) {
+      const ctx = document.getElementById('trafficChart').getContext('2d');
+      if (trafficChart) trafficChart.destroy();
+      const g = ctx.createLinearGradient(0,0,0,420); g.addColorStop(0,'rgba(59,130,246,0.95)'); g.addColorStop(1,'rgba(59,130,246,0.18)');
+      const labels = hourly.map((_,i)=> {
+        const h = new Date(); h.setHours(h.getHours()-11 + i); return h.getHours()+':00';
+      });
+      trafficChart = new Chart(ctx, {
+        type:'line', data:{ labels, datasets:[{ label:'Traffic %', data:hourly, borderColor:'#3B82F6', backgroundColor:g, fill:true, borderWidth:3, tension:0.36, pointRadius:4 }]},
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#fff'}}}, scales:{ x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff', callback: v => v + '%' }} }
+      });
+    }
+
+    // ---------- Main search handler ----------
+    async function handleSearch() {
+      const city = cityInput.value.trim();
+      if (!city) { alert('Enter a location'); return; }
+
+      // UI: placeholder while loading
+      weatherLocation.textContent = 'Loading...';
+      aqiLocation.textContent = 'Loading...';
+      trafficLocation.textContent = 'Loading...';
+      weatherTemp.textContent = '—'; aqiValueEl.textContent = '—'; trafficLevel.textContent='—';
+
+      try {
+        const geo = await geocodeCity(city);
+        const displayName = `${geo.name}${geo.state ? ', '+geo.state : ''}, ${geo.country}`;
+        // Update location labels
+        weatherLocation.textContent = displayName; aqiLocation.textContent = displayName; trafficLocation.textContent = displayName;
+
+        // fetch weather & pollution in parallel
+        const [weatherResp, aqiResp, trafficResp] = await Promise.allSettled([
+          fetchWeather(geo.lat, geo.lon),
+          fetchAirPollution(geo.lat, geo.lon),
+          fetchTrafficFromAPIOrSimulate(geo.lat, geo.lon)
+        ]);
+
+        // WEATHER
+        if (weatherResp.status === 'fulfilled') {
+          const w = weatherResp.value;
+          const tempC = Math.round(w.main.temp);
+          weatherTemp.textContent = tempC + '°C';
+          weatherDesc.textContent = (w.weather && w.weather[0] && w.weather[0].description) ? w.weather[0].description : '—';
+          humidityEl.textContent = (w.main.humidity ?? '—') + '%';
+          windSpeedEl.textContent = (w.wind.speed ?? '—') + ' m/s';
+          pressureEl.textContent = (w.main.pressure ?? '—') + ' hPa';
+          visibilityEl.textContent = (w.visibility ? Math.round(w.visibility/1000) + ' km' : '—');
+
+          // make a small hourly-ish line sample for weather chart (use local forecast placeholders)
+          createWeatherChart({ labels:['Now','+3h','+6h','+9h','+12h','+15h','+18h','+21h'], data:[ tempC-2, tempC-1, tempC, tempC+2, tempC+3, tempC+1, tempC-1, tempC-2 ] });
+        } else {
+          showTempError(weatherLocation, 'Weather unavailable');
+        }
+
+        // AQI
+        if (aqiResp.status === 'fulfilled' && aqiResp.value && aqiResp.value.list && aqiResp.value.list.length>0) {
+          const a = aqiResp.value.list[0];
+          // OpenWeatherMap's aqi index uses 1..5 scale; its components under components
+          // We'll present a combined "AQI number" derived from pm2.5 if available:
+          const comp = a.components || {};
+          const pm25 = Math.round((comp.pm2_5 ?? 0));
+          // approximate "index" by collecting pm2.5 to simple numeric display
+          const approxAQI = Math.min(500, Math.round(pm25 * 2)); // simple scale
+          aqiValueEl.textContent = approxAQI;
+          pm25El.textContent = comp.pm2_5 ?? '—';
+          pm10El.textContent = comp.pm10 ?? '—';
+          no2El.textContent = comp.no2 ?? '—';
+          o3El.textContent = comp.o3 ?? '—';
+          updateAQIBadgeAndColor(approxAQI);
+
+          // build pollutants object
+          const pollutants = { pm2_5: comp.pm2_5 ?? 0, pm10: comp.pm10 ?? 0, no2: comp.no2 ?? 0, o3: comp.o3 ?? 0, so2: comp.so2 ?? 0 };
+          createAQIChart(pollutants);
+        } else {
+          aqiValueEl.textContent = '—';
+          showTempError(aqiLocation, 'AQI unavailable');
+          // still create an empty chart
+          createAQIChart({ pm2_5:12, pm10:30, no2:20, o3:40, so2:10 });
+        }
+
+        // TRAFFIC (simulated)
+        if (trafficResp.status === 'fulfilled') {
+          const t = trafficResp.value;
+          trafficLevel.textContent = t.level;
+          trafficDesc.textContent = `${t.percentage}% congestion`;
+          avgSpeedEl.textContent = t.avgSpeed + ' km/h';
+          congestionEl.textContent = t.percentage + '%';
+          incidentsEl.textContent = t.incidents;
+          travelTimeEl.textContent = t.travelTime + ' min';
+          createTrafficChart(t.hourly);
+        } else {
+          // fallback
+          showTempError(trafficLocation, 'Traffic unavailable');
+          const fallback = await fetchTrafficFromAPIOrSimulate(geo.lat, geo.lon);
+          trafficLevel.textContent = fallback.level;
+          trafficDesc.textContent = `${fallback.percentage}% congestion (simulated)`;
+          avgSpeedEl.textContent = fallback.avgSpeed + ' km/h';
+          congestionEl.textContent = fallback.percentage + '%';
+          incidentsEl.textContent = fallback.incidents;
+          travelTimeEl.textContent = fallback.travelTime + ' min';
+          createTrafficChart(fallback.hourly);
+        }
+
+      } catch (err) {
+        console.error(err);
+        alert('Search failed: ' + (err.message || 'Unknown error'));
+        weatherLocation.textContent = '—'; aqiLocation.textContent = '—'; trafficLocation.textContent = '—';
+      }
+    }
+
+    // wire search
+    searchBtn.addEventListener('click', handleSearch);
+    cityInput.addEventListener('keypress', (e)=> { if (e.key === 'Enter') handleSearch(); });
+
+    // init small default charts with sample data
+    document.addEventListener('DOMContentLoaded', () => {
+      createWeatherChart({ labels:['12 AM','3 AM','6 AM','9 AM','12 PM','3 PM','6 PM','9 PM'], data:[18,17,16,20,23,24,22,19] });
+      createAQIChart({ pm2_5:15, pm10:28, no2:25, o3:45, so2:12 });
+      createTrafficChart([45,50,55,60,70,75,80,75,70,65,60,55]);
+    });
+
+    // Accessibility: pause videos if user prefers reduced motion
+    (function handleReducedMotion(){
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+      if (prefersReduced.matches) {
+        document.querySelectorAll('video.section-video').forEach(v=>{
+          v.pause(); v.removeAttribute('autoplay');
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
