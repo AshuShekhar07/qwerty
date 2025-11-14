@@ -207,9 +207,9 @@ function renderWeatherData(data) {
   weatherDescEl.textContent = data.weather[0].description;
   
   // Update details
-  humidityEl.textContent = ${data.main.humidity}%;
-  windSpeedEl.textContent = ${data.wind.speed} km/h;
-  feelsLikeEl.textContent = ${Math.round(data.main.feels_like)}°C;
+  humidityEl.textContent = data.main.humidity + '%';
+  windSpeedEl.textContent = data.wind.speed + ' km/h';
+  feelsLikeEl.textContent = Math.round(data.main.feels_like) + '°C';
   
   // Update weather icon
   updateWeatherIcon(data.weather[0].main);
@@ -233,7 +233,8 @@ function updateWeatherIcon(condition) {
   };
   
   const iconSVG = iconMap[condition] || iconMap['Clear'];
-  weatherIconEl.innerHTML = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${iconSVG}</svg>;
+  weatherIconEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' + iconSVG + '</svg>';
+
 }
 
 // Update weather section background based on condition
@@ -276,7 +277,7 @@ async function fetchAQIData(city) {
     hideElement(aqiContent);
     
     // Example API URL construction (adjust based on your actual API)
-    // const url = ${AQI_API_URL}?city=${city}&key=${AQI_API_KEY};
+    // const url = AQI_API_URL + '?city=' + city + '&key=' + AQI_API_KEY;
     
     // For demonstration, show example data after 1 second
     setTimeout(() => {
@@ -436,7 +437,7 @@ async function fetchTrafficData(city) {
     hideElement(trafficContent);
     
     // Example API URL construction (adjust based on your actual API)
-    // const url = ${TRAFFIC_API_URL}?city=${city}&key=${TRAFFIC_API_KEY};
+    // const url = TRAFFIC_API_URL + '?city=' + city + '&key=' + TRAFFIC_API_KEY;
     
     // For demonstration, show example data after 1 second
     setTimeout(() => {
@@ -462,7 +463,7 @@ function renderTrafficData(data) {
   trafficLevelEl.textContent = data.level;
   
   // Update percentage
-  trafficPercentageEl.textContent = ${data.percentage}%;
+  trafficPercentageEl.textContent = data.percentage + '%';
   
   // Update indicator color based on level
   const indicatorColors = {
