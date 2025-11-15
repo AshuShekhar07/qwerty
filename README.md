@@ -12,9 +12,9 @@ A modern, interactive, single-page dashboard with GIF-based dynamic backgrounds.
 The *Smart City Dashboard* is a *single-page web application* that provides real-time or publicly available data for any major city.
 It displays:
 
-* 🌦 *Weather Forecast*
-* 🌫 *Air Quality Index (AQI)*
-* 🚗 *Traffic Density*
+*  *Weather Forecast*
+*  *Air Quality Index (AQI)*
+*  *Traffic Density*
 
 The UI is transparent, minimal, animated, and fully optimized for smooth scrolling with automated background GIF transitions that match real-world weather conditions (sunny, cloudy, rainy, thunder, snow, etc.).
 
@@ -116,19 +116,6 @@ Smooth transitions are achieved through a *dual-layer opacity fade system*.
 2. Right-click index.html → *Open with Live Server*
 3. Dashboard opens at
    http://localhost:5500/
-
----
-
-### *Option 2 — Python Local Server*
-
-In the project folder:
-
-
-python -m http.server 8000
-
-
-Open browser →
-http://localhost:8000/
 
 ---
 
