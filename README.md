@@ -92,22 +92,6 @@ The project supports:
 
 ---
 
-##  Dynamic Weather Background System
-
-The dashboard uses *GIF-based background animations* that automatically change according to the weather code returned by the API.
-
-Examples:
-
-*  0 → sunny.gif
-*  1–3 → cloudy.gif
-*  51–67, 80–82 → rainy.gif
-*  95–99 → thunder.gif
-*   71–86 → snow.gif
-
-Smooth transitions are achieved through a *dual-layer opacity fade system*.
-
----
-
 ##  How to Run Locally
 
 ### *Option 1 — VS Code Live Server (Recommended)*
